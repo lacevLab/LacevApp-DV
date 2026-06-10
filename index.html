@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LacevApp - Viewer</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@500;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js" crossorigin="anonymous"></script>
+    <style>
+        :root {
+            --bg-body: #050505; --bg-card: #121212; --bg-card-hover: #1a1a1a;
+            --primary: #22c55e; --primary-dark: #16a34a; --primary-glow: rgba(34, 197, 94, 0.2);
+            --border: #262626; --text-main: #f8fafc; --text-muted: #a1a1aa; --radius: 12px;
+        }
+
+        body { font-family: 'Inter', sans-serif; background-color: var(--bg-body); color: var(--text-main); margin: 0; padding: 20px; line-height: 1.6; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        
+        .header { display: flex; align-items: center; justify-content: space-between; padding: 30px; background: linear-gradient(145deg, var(--bg-card) 0%, #0a0a0a 100%); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .header h1 { margin: 0; font-family: 'Outfit', sans-serif; font-size: 2.2rem; font-weight: 800; letter-spacing: -0.5px; }
+        .header h1 span { color: var(--primary); text-shadow: 0 0 15px var(--primary-glow); }
+        .header p { margin: 5px 0 0 0; color: var(--text-muted); font-size: 1.1rem; }
+        
+        /* Upload Area */
+        #upload-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 80px 20px; text-align: center; background: var(--bg-card); border: 2px dashed var(--border); border-radius: var(--radius); margin-top: 50px; transition: 0.3s; }
+        #upload-screen:hover { border-color: var(--primary); background: var(--bg-card-hover); }
+        .upload-icon { font-size: 4rem; margin-bottom: 20px; }
+        .upload-btn { background: var(--primary); color: #000; padding: 15px 30px; border-radius: 8px; font-family: 'Outfit', sans-serif; font-weight: 700; font-size: 1.1rem; cursor: pointer; border: none; transition: 0.3s; margin-top: 20px; }
+        .upload-btn:hover { background: var(--primary-dark); transform: scale(1.05); }
+        input[type="file"] { display: none; }
+
+        /* Main Dashboard (Hidden initially) */
+        #main-dashboard { display: none; animation: fadeIn 0.5s; }
+
+        .tabs { display: flex; gap: 10px; margin-bottom: 30px; border-bottom: 1px solid var(--border); padding-bottom: 10px; overflow-x: auto; }
+        .tab-btn { background: transparent; border: none; color: var(--text-muted); padding: 12px 24px; font-family: 'Outfit', sans-serif; font-size: 1.1rem; font-weight: 600; cursor: pointer; border-radius: 8px; transition: all 0.3s ease; white-space: nowrap; }
+        .tab-btn:hover { color: var(--text-main); background: var(--bg-card-hover); }
+        .tab-btn.active { color: var(--primary); background: var(--primary-glow); box-shadow: 0 0 10px var(--primary-glow); }
+
+        .tab-content { display: none; }
+        .tab-content.active { display: block; animation: fadeIn 0.4s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 25px; margin-bottom: 25px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
+        .card h2 { margin-top: 0; font-family: 'Outfit', sans-serif; color: var(--primary); font-size: 1.4rem; border-bottom: 1px solid var(--border); padding-bottom: 15px; margin-bottom: 20px; }
+
+        .controls { display: flex; flex-wrap: wrap; gap: 20px; align-items: center; }
+        .control-group label { display: block; margin-bottom: 8px; font-weight: 500; color: var(--text-muted); font-size: 0.9rem; }
+        select { background: #000; color: #fff; border: 1px solid var(--border); padding: 12px 16px; border-radius: 8px; font-family: 'Inter', sans-serif; font-size: 1rem; outline: none; cursor: pointer; min-width: 280px; transition: 0.3s; }
+        select:focus { border-color: var(--primary); }
+
+        .toggle-group { display: flex; background: #000; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+        .toggle-btn { background: transparent; color: var(--text-muted); border: none; padding: 12px 20px; cursor: pointer; font-weight: 500; transition: all 0.3s; }
+        .toggle-btn.active { background: var(--primary); color: #000; font-weight: 600; }
+
+        .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; margin-top: 25px; }
+        .chart-wrapper { position: relative; height: 350px; width: 100%; }
+        
+        .table-responsive { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
+        th, td { padding: 14px; text-align: left; border-bottom: 1px solid var(--border); }
+        th { color: var(--text-muted); font-weight: 600; background: rgba(255,255,255,0.02); }
+        tr:hover td { background: rgba(255,255,255,0.03); }
+
+        .badge { padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; }
+        .badge-green { background: rgba(34, 197, 94, 0.2); color: var(--primary); border: 1px solid var(--primary-dark); }
+        .badge-gray { background: rgba(255, 255, 255, 0.1); color: var(--text-muted); }
+
+        details { background: #000; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 15px; }
+        summary { padding: 16px; font-weight: 500; cursor: pointer; outline: none; display: flex; justify-content: space-between; align-items: center; }
+        summary::-webkit-details-marker { display: none; }
+        .details-body { padding: 20px; border-top: 1px solid var(--border); background: var(--bg-card); }
+
+        @media (max-width: 900px) { .charts-grid { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="header">
+            <div>
+                <h1><span>Lacev</span>App Data Viewer</h1>
+                <p>Visualizador Web de Eletrofisiologia Vegetal</p>
+            </div>
+            <button id="btn-reset" class="tab-btn" style="display:none;" onclick="location.reload()">Carregar Novo Arquivo</button>
+        </div>
+
+        <div id="upload-screen">
+            <div class="upload-icon">📊</div>
+            <h2>Importar Resultados do LacevApp</h2>
+            <p style="color: var(--text-muted); max-width: 500px;">
+                Selecione o arquivo <b>features_data.json</b> gerado pelo LacevApp no seu computador. <br>
+                Nenhum dado é enviado para a internet. Todo o processamento ocorre no seu próprio navegador.
+            </p>
+            <label for="fileInput" class="upload-btn">Selecionar Arquivo .json</label>
+            <input type="file" id="fileInput" accept=".json">
+        </div>
+
+        <div id="main-dashboard">
+            <div class="tabs">
+                <button class="tab-btn active" onclick="switchTab('dashboard')">Painel Interativo</button>
+                <button class="tab-btn" onclick="switchTab('stats')">Estatísticas e Comparações</button>
+                <button class="tab-btn" onclick="switchTab('ols')">Análise OLS (P-Value)</button>
+            </div>
+
+            <div class="card" id="desc-card" style="display: none;">
+                <h2>Descrição do Experimento</h2>
+                <p id="exp-desc" style="color: var(--text-muted);"></p>
+            </div>
+
+            <div id="tab-dashboard" class="tab-content active">
+                <div class="card controls">
+                    <div class="control-group">
+                        <label>Selecione a Métrica Fisiológica:</label>
+                        <select id="metric-select" onchange="updateCharts()">
+                            <optgroup label="Voltagem Bruta">
+                                <option value="Raw_mean">Média</option>
+                                <option value="Raw_min">Mínimo</option>
+                                <option value="Raw_max">Máximo</option>
+                                <option value="Raw_var">Variância</option>
+                            </optgroup>
+                            <optgroup label="Caos e Complexidade">
+                                <option value="ApEn">Approximate Entropy (ApEn)</option>
+                                <option value="SampleEntropy" selected>Sample Entropy (SampEn)</option>
+                                <option value="DFA">DFA (Hurst)</option>
+                                <option value="Lyap_r">Lyapunov (Rosenstein)</option>
+                            </optgroup>
+                            <optgroup label="Espectro de Frequência">
+                                <option value="PSD_mean">PSD Média (Multitaper)</option>
+                                <option value="Bandpower_ISO">Infra-Slow (0.005-0.1 Hz)</option>
+                                <option value="Bandpower_Delta">Delta (0.1-4 Hz)</option>
+                                <option value="Bandpower_Theta">Theta (4-8 Hz)</option>
+                            </optgroup>
+                        </select>
+                    </div>
+                    <div class="control-group">
+                        <label>Tipo de Escala:</label>
+                        <div class="toggle-group">
+                            <button id="btn-raw" class="toggle-btn active" onclick="setMode('raw')">Valores Brutos</button>
+                            <button id="btn-zscore" class="toggle-btn" onclick="setMode('zscore')">Z-Score (Baseline)</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="charts-grid">
+                    <div class="card">
+                        <h2>Evolução Temporal</h2>
+                        <div class="chart-wrapper"><canvas id="lineChart"></canvas></div>
+                    </div>
+                    <div class="card">
+                        <h2>Média Geral por Classe</h2>
+                        <div class="chart-wrapper"><canvas id="barChart"></canvas></div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="tab-stats" class="tab-content">
+                <div class="card">
+                    <h2>Médias Absolutas por Classe</h2>
+                    <div class="table-responsive" id="table-means"></div>
+                </div>
+                <div class="card">
+                    <h2>Diferença Percentual entre Pares (%)</h2>
+                    <div class="table-responsive" id="table-comps"></div>
+                </div>
+            </div>
+
+            <div id="tab-ols" class="tab-content">
+                <div class="card">
+                    <h2>Regressão Linear Pareada (OLS)</h2>
+                    <p style="color: var(--text-muted); margin-bottom: 20px;">
+                        Modelagem <code>Feature_Z ~ Tratamento</code>. Destaca diferenças com significância estatística (p < 0.05).
+                    </p>
+                    <div id="ols-container"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let db = null;
+        let lineChart = null;
+        let barChart = null;
+        let currentMode = 'raw';
+        const palette = ['#22c55e', '#0ea5e9', '#8b5cf6', '#f59e0b', '#f43f5e', '#14b8a6'];
+
+        // Lógica de Upload do Arquivo
+        document.getElementById('fileInput').addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    db = JSON.parse(e.target.result);
+                    iniciarDashboard();
+                } catch (err) {
+                    alert("Erro ao ler o arquivo. Certifique-se de que é um .json gerado pelo LacevApp.");
+                }
+            };
+            reader.readAsText(file);
+        });
+
+        function iniciarDashboard() {
+            document.getElementById('upload-screen').style.display = 'none';
+            document.getElementById('main-dashboard').style.display = 'block';
+            document.getElementById('btn-reset').style.display = 'block';
+
+            if(db.experiment_description && db.experiment_description.trim() !== "None") {
+                document.getElementById('desc-card').style.display = 'block';
+                document.getElementById('exp-desc').textContent = db.experiment_description;
+            }
+            
+            renderTables();
+            renderOLS();
+            updateCharts();
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            document.getElementById('tab-' + tabId).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        function setMode(mode) {
+            currentMode = mode;
+            document.getElementById('btn-raw').classList.toggle('active', mode === 'raw');
+            document.getElementById('btn-zscore').classList.toggle('active', mode === 'zscore');
+            updateCharts();
+        }
+
+        function updateCharts() {
+            if (!db || !db.time_series) return;
+            const metric = document.getElementById('metric-select').value;
+            let dataKey = currentMode === 'zscore' ? metric + '_Z' : metric;
+            const classes = Object.keys(db.time_series
